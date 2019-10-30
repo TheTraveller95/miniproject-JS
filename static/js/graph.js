@@ -17,6 +17,7 @@ function makeGraph(error, salaryData) {   // 1st argument= error   2nd argument=
     show_discipline_selector(ndx);
     show_average_salary(ndx);
     show_rank_distribution(ndx);
+    show_percent_that_are_professors(ndx);
 
     dc.renderAll();
 }
@@ -201,4 +202,45 @@ function show_rank_distribution(ndx){
         .xUnits(dc.units.ordinal)
         .legend(dc.legend().x(320).y(20).itemHeight(15).gap(5))
         .margins({top:10, right:100, bottom:30, left:30})
+}
+
+function show_percent_that_are_professors(ndx){
+
+    var percentageFemaleThatAreProf= ndx.groupAll().reduce(
+
+        function add_items(p,v){
+
+            if(v.sex=="Female"){
+                p.count++;
+                if(v.rank == "Prof"){
+                    p.are_prof++;
+                }
+            }
+
+            return p;
+
+        },
+
+        function remove_items(p,v){
+
+            if(v.sex=="Female"){
+                    p.count--;
+                    if(v.rank == "Prof"){
+                        p.are_prof--;
+                    }
+                }
+
+                return p;
+
+        },
+
+        function initalise(){
+
+            return ({count:0, are_prof:0})    // the data structure of our initialise() returns will consist of a count of the total number of record we encoutered and a second argumnent
+                // telling us how many of these are prof
+
+        }
+
+    )
+
 }
