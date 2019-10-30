@@ -16,6 +16,7 @@ function makeGraph(error, salaryData) {   // 1st argument= error   2nd argument=
     show_gender_balance(ndx); // we passed the ndx in the show_gender_balance function (witch does not exist yet, we need to create it)
     show_discipline_selector(ndx);
     show_average_salary(ndx);
+    show_rank_distribution(ndx);
 
     dc.renderAll();
 }
@@ -105,4 +106,99 @@ function show_average_salary(ndx){
         .xAxisLabel('Gender')
         .elasticY(true)
         .yAxis().ticks(4);
+}
+
+function show_rank_distribution(ndx){
+    var dim= ndx.dimension(dc.pluck('sex'));
+
+    /*var profByGender= dim.group().reduce( //this custom reduce() is valid only for professors and not for the other categories
+
+        function add_item(p,v){  //p is the accumulator that keeps track of the value and v is the individual items that are getting added
+
+            p.total++;
+            if(v.rank=='Prof'){ //we only increment match if the rank of the piece of data we are looking at is professor
+                p.match++;
+            }
+
+            return p;
+
+        },
+
+        function remove_item(p,v){
+
+            p.total--;
+            if(v.rank=='Prof'){ //we only decrement match if the rank of the piece of data we are looking at is professor
+                p.match--;
+            }
+
+            return p;
+        },
+
+        function initalise(){  //it takes no argument but it create the data structure that will be threaded through the calls to add_items and remove_items
+
+            return {total:0, match:0}   //total = an accumulator or a count for the number of rows that we are dailing with
+                                        //match = count of how many of those rows are professors
+
+        }
+
+    )  //we need to find what percentage of men are professors, assistant professor and associate professors and the same for women*/
+
+    function rankByGender(dimension,rank){
+
+        return dimension.group().reduce( // we return the same reduce function we worte before but this time we make it general
+
+        function add_item(p,v){
+
+            p.total++;
+            if(v.rank==rank){ //we only increment match if the rank of the piece of data we are looking at is the rank we are looking at
+                p.match++;
+            }
+
+            return p;
+
+        },
+
+        function remove_item(p,v){
+
+            p.total--;
+            if(v.rank==rank){
+                p.match--;
+            }
+
+            return p;
+        },
+
+        function initalise(){
+
+            return {total:0, match:0}
+
+        })
+
+    }
+
+    var profByGender= rankByGender(dim, "Prof") //as for the other cathegories the code would be the same, insted of duplicate it, we create a function rankByGender()
+                                                //that can be called in the 3 cases just changing the   - dimension (that is always the same)
+                                                //                                                      - rank (Prof, AsstProf, AssocProf)
+    var asstProfByGender= rankByGender(dim, "AsstProf")
+    var assocProfByGender= rankByGender(dim, "AssocProf")
+
+    dc.barChart("#rank-distribution")
+        .width(400)
+        .height(300)
+        .dimension(dim)
+        .group(profByGender, "Prof")
+        .stack(asstProfByGender, "Asst Prof")
+        .stack(assocProfByGender, "Assoc Prof")
+        .valueAccessor(function(d){
+            if(d.value.total>0){  //the total part of the data structure, our value, is the total number of men or women that we have been found
+                return (d.value.match / d.value.total) * 100;  //the match is the number of those that are professor, assistant professor, etc. So for each value that we are plotting we need to
+                            //find what part of the total is the match
+            } else {
+                return 0;
+            }
+        })
+        .x(d3.scale.ordinal())
+        .xUnits(dc.units.ordinal)
+        .legend(dc.legend().x(320).y(20).itemHeight(15).gap(5))
+        .margins({top:10, right:100, bottom:30, left:30})
 }
