@@ -9,8 +9,10 @@ function makeGraph(error, salaryData) {   // 1st argument= error   2nd argument=
     var ndx= crossfilter(salaryData);
 
     salaryData.forEach(function (d) {
-        d.salary= parseInt(d.salary) //we need ot convert the text format of the salary of the CSV file into integer. Otherwise our show_average_salary()
+        d.salary= parseInt(d.salary); //we need ot convert the text format of the salary of the CSV file into integer. Otherwise our show_average_salary()
                                     // function won't read the data
+        d.yrs_service= parseInt(d["yrs.service"]); // same reason of the above one. In this case we wrap the yrs.service inside the brackets and quotes because the variable
+                                                    //already has a dot inside the name, so using the dot notation as in the example above would cause some issue
     });
 
     show_gender_balance(ndx); // we passed the ndx in the show_gender_balance function (witch does not exist yet, we need to create it)
@@ -20,6 +22,7 @@ function makeGraph(error, salaryData) {   // 1st argument= error   2nd argument=
     /*show_percent_that_are_professors(ndx) //after generalizing the function below, we now need to call this function once for the men and once for the women*/
     show_percent_that_are_professors(ndx, 'Female', '#percentage-of-women-professors');
     show_percent_that_are_professors(ndx, 'Male', '#percentage-of-men-professors');
+    show_service_to_salary_correlation(ndx);
 
     dc.renderAll();
 }
@@ -297,3 +300,44 @@ function show_percent_that_are_professors(ndx, gender, element){ //now we genera
         .group(percentageThatAreProf);
 
 };
+
+function show_service_to_salary_correlation(ndx){
+
+    var genderColors = d3.scale.ordinal()
+        .domain(['Female', 'Male'])
+        .range(['pink', 'blue']) //female=pink and male=blue
+
+    var eDim= ndx.dimension(dc.pluck('yrs_service')); // the first dimension is going to be on years of service and we only use this to work on the bounds of the x-axis
+                                                    // the minimum and the maximum year of service that we need to plot
+
+    var experienceDim= ndx.dimension(function(d){  //the second dimension return an array with 2 parts: years of service and salary and this will allow us to plot the dots of the scatter plot at the right x and y coordinates
+        return [d.yrs_service, d.salary, d.rank, d.sex] //the function returns years of service (used to plot the x cordinates of the dots) and salary (used to plot the y cordinates of the dots)
+    }); //we also added d.sex in order to make the color method (that is based on Female and Men) work. And then we added rank just because the teacher wants to :)
+
+    var experienceSalaryGroup= experienceDim.group();
+    var minEperience = eDim.bottom(1)[0].yrs_service;
+    var maxEperience= eDim.top(1)[0].yrs_service;
+
+    dc.scatterPlot('#service-salary')
+        .width(800)
+        .height(400)
+        .x(d3.scale.linear().domain([minEperience, maxEperience])) //in this case we use linear and not ordinal because 5 years of service are more then 4, so we need our data to be ordinated
+                                                                    // and the domain go from the minimum experiencce to the maximum experience
+        .brushOn(false)
+        .symbolSize(8) //size of the dots
+        .clipPadding(10) //leaves room near the top so that if we have a plot that is right on the top there is actually room for it
+        .xAxisLabel("Years of service")
+        .yAxisLabel("Salary")
+        .title(function(d){ //what appear if you hover the mouse over a dot
+            return d.key[2] + "Earned" + d.key[1]; //the key[1] (that means salary) is related to the experienceDim. The salary is the 2nd item, this is why we put key[1](because they start from 0)
+        })
+        .colorAccessor(function(d){
+            return d.key[3]; //the key[3] (that means sex) is related to the experienceDim. The sex is the 4th item, this is why we put key[3](because they start from 0)
+        }) //this decides wich piece of data we use as an input into our genderColor scale
+        .colors(genderColors)
+        .dimension(experienceDim)
+        .group(experienceSalaryGroup)
+        .margins({top:10  ,right: 50 , bottom: 75 , left:75});
+
+
+}
