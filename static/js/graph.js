@@ -17,7 +17,9 @@ function makeGraph(error, salaryData) {   // 1st argument= error   2nd argument=
     show_discipline_selector(ndx);
     show_average_salary(ndx);
     show_rank_distribution(ndx);
-    show_percent_that_are_professors(ndx);
+    /*show_percent_that_are_professors(ndx) //after generalizing the function below, we now need to call this function once for the men and once for the women*/
+    show_percent_that_are_professors(ndx, 'Female', '#percentage-of-women-professors');
+    show_percent_that_are_professors(ndx, 'Male', '#percentage-of-men-professors');
 
     dc.renderAll();
 }
@@ -204,7 +206,7 @@ function show_rank_distribution(ndx){
         .margins({top:10, right:100, bottom:30, left:30})
 }
 
-function show_percent_that_are_professors(ndx){
+/*function show_percent_that_are_professors(ndx){ //for the moment we focalise on the percentage of the female being professors
 
     var percentageFemaleThatAreProf= ndx.groupAll().reduce(
 
@@ -242,5 +244,56 @@ function show_percent_that_are_professors(ndx){
         }
 
     )
+}*/
 
-}
+function show_percent_that_are_professors(ndx, gender, element){ //now we generalize the function adding "gender" and "element" as argouments of the function
+
+    var percentageThatAreProf= ndx.groupAll().reduce(
+
+        function add_items(p,v){
+
+            if(v.sex==gender){
+                p.count++;
+                if(v.rank == "Prof"){
+                    p.are_prof++;
+                }
+            }
+
+            return p;
+
+        },
+
+        function remove_items(p,v){
+
+            if(v.sex==gender){
+                    p.count--;
+                    if(v.rank == "Prof"){
+                        p.are_prof--;
+                    }
+                }
+
+                return p;
+
+        },
+
+        function initalise(){
+
+            return {count:0, are_prof:0};    // the data structure of our initialise() returns will consist of a count of the total number of record we encoutered and a second argumnent
+                // telling us how many of these are prof
+
+        }
+
+    );
+
+    dc.numberDisplay(element) //we replaced the Div ID with the element where we want the number displayed
+        .formatNumber(d3.format('.2%')) //we want to display the number with 2 decimals
+        .valueAccessor(function(d){
+            if(d.count==0){
+                return 0;
+            } else {
+                return (d.are_prof/d.count);
+            }
+        }) //we need to use the value accessor because we used the custom reduce() so our values have a count part and an are_prof part right now
+        .group(percentageThatAreProf);
+
+};
