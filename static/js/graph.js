@@ -13,6 +13,7 @@ function makeGraph(error, salaryData) {   // 1st argument= error   2nd argument=
                                     // function won't read the data
         d.yrs_service= parseInt(d["yrs.service"]); // same reason of the above one. In this case we wrap the yrs.service inside the brackets and quotes because the variable
                                                     //already has a dot inside the name, so using the dot notation as in the example above would cause some issue
+        d.yrs_since_phd= parseInt(d["yrs.since.phd"]);
     });
 
     show_gender_balance(ndx); // we passed the ndx in the show_gender_balance function (witch does not exist yet, we need to create it)
@@ -23,6 +24,7 @@ function makeGraph(error, salaryData) {   // 1st argument= error   2nd argument=
     show_percent_that_are_professors(ndx, 'Female', '#percentage-of-women-professors');
     show_percent_that_are_professors(ndx, 'Male', '#percentage-of-men-professors');
     show_service_to_salary_correlation(ndx);
+    show_phd_to_salary_correlation(ndx);
 
     dc.renderAll();
 }
@@ -338,6 +340,41 @@ function show_service_to_salary_correlation(ndx){
         .dimension(experienceDim)
         .group(experienceSalaryGroup)
         .margins({top:10  ,right: 50 , bottom: 75 , left:75});
+}
 
+function show_phd_to_salary_correlation(ndx){ //this function is a duplicate of the previous one where we jus renamed some variables
 
+    var genderColors = d3.scale.ordinal()
+        .domain(['Female', 'Male'])
+        .range(['pink', 'blue']) //female=pink and male=blue
+
+    var pDim= ndx.dimension(dc.pluck('yrs_since_phd'));
+
+    var phdDim= ndx.dimension(function(d){  //the second dimension return an array with 2 parts: years of service and salary and this will allow us to plot the dots of the scatter plot at the right x and y coordinates
+        return [d.yrs_since_phd, d.salary, d.rank, d.sex] //the function returns years of service (used to plot the x cordinates of the dots) and salary (used to plot the y cordinates of the dots)
+    }); //we also added d.sex in order to make the color method (that is based on Female and Men) work. And then we added rank just because the teacher wants to :)
+
+    var phdSalaryGroup= phdDim.group();
+    var minPhd = pDim.bottom(1)[0].yrs_since_phd;
+    var maxPhd= pDim.top(1)[0].yrs_since_phd;
+
+    dc.scatterPlot('#phd-salary')
+        .width(800)
+        .height(400)
+        .x(d3.scale.linear().domain([minPhd, maxPhd]))
+        .brushOn(false)
+        .symbolSize(8) //size of the dots
+        .clipPadding(10) //leaves room near the top so that if we have a plot that is right on the top there is actually room for it
+        .xAxisLabel("Years since Phd")
+        .yAxisLabel("Salary")
+        .title(function(d){ //what appear if you hover the mouse over a dot
+            return d.key[2] + "Earned" + d.key[1];
+        })
+        .colorAccessor(function(d){
+            return d.key[3];
+        }) //this decides wich piece of data we use as an input into our genderColor scale
+        .colors(genderColors)
+        .dimension(phdDim)
+        .group(phdSalaryGroup)
+        .margins({top:10  ,right: 50 , bottom: 75 , left:75});
 }
